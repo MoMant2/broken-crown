@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Broken Crown – A Dark Fantasy MMO</title>
+<meta name="description" content="The king is dead. The crown is shattered. Fight for every shard in this hex-based dark fantasy MMO.">
+<meta property="og:title" content="Broken Crown">
+<meta property="og:description" content="The king is dead. The crown is shattered. Fight for every shard.">
+<meta property="og:type" content="website">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👑</text></svg>">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap');
+
+  *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+  :root {
+    --gold: #d4a853;
+    --gold-bright: #e8c36a;
+    --gold-dark: #8a6a2a;
+    --bg: #06070a;
+    --text: #c8c4b8;
+    --dim: #6a6558;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Crimson Text', Georgia, serif;
+    background: var(--bg);
+    color: var(--text);
+    overflow-x: hidden;
+  }
+
+  /* === HERO === */
+  .hero {
+    position: relative;
+    height: 100vh;
+    min-height: 600px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    overflow: hidden;
+  }
+
+  .hero-bg {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 50% at 50% 40%, rgba(212,168,83,0.06) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 80% at 30% 70%, rgba(139,37,0,0.04) 0%, transparent 50%),
+      radial-gradient(ellipse 50% 50% at 70% 30%, rgba(46,115,38,0.03) 0%, transparent 50%),
+      linear-gradient(180deg, #06070a 0%, #0a0c12 40%, #080a0f 100%);
+    z-index: 0;
+  }
+
+  /* Animated particles */
+  .particles {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    overflow: hidden;
+  }
+
+  .particle {
+    position: absolute;
+    width: 2px;
+    height: 2px;
+    background: var(--gold);
+    border-radius: 50%;
+    opacity: 0;
+    animation: float-up 6s ease-in infinite;
+  }
+
+  @keyframes float-up {
+    0% { transform: translateY(100vh) scale(0); opacity: 0; }
+    10% { opacity: 0.6; }
+    90% { opacity: 0.2; }
+    100% { transform: translateY(-10vh) scale(1); opacity: 0; }
+  }
+
+  .hero-content {
+    position: relative;
+    z-index: 2;
+    max-width: 700px;
+    padding: 0 24px;
+  }
+
+  /* Crown icon */
+  .crown-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    filter: grayscale(0.3);
+    animation: crown-pulse 4s ease-in-out infinite;
+  }
+
+  @keyframes crown-pulse {
+    0%, 100% { transform: scale(1); filter: grayscale(0.3) brightness(0.8); }
+    50% { transform: scale(1.05); filter: grayscale(0) brightness(1.1); }
+  }
+
+  /* Decorative line */
+  .deco-line {
+    width: 60px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    margin: 0 auto 20px;
+  }
+
+  .hero-title {
+    font-family: 'Cinzel', serif;
+    font-weight: 900;
+    font-size: clamp(42px, 8vw, 80px);
+    letter-spacing: 6px;
+    line-height: 1.0;
+    color: transparent;
+    background: linear-gradient(180deg, #f0d68a 0%, #d4a853 40%, #8a6a2a 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    margin-bottom: 12px;
+    text-shadow: 0 0 60px rgba(212,168,83,0.15);
+  }
+
+  .hero-sub {
+    font-family: 'Cinzel', serif;
+    font-size: clamp(13px, 2vw, 16px);
+    letter-spacing: 4px;
+    color: var(--dim);
+    text-transform: uppercase;
+    margin-bottom: 32px;
+  }
+
+  .hero-tagline {
+    font-size: clamp(18px, 3vw, 24px);
+    font-style: italic;
+    color: #8a8578;
+    margin-bottom: 40px;
+    line-height: 1.5;
+  }
+
+  .hero-tagline em {
+    color: var(--gold);
+    font-style: italic;
+  }
+
+  /* CTA Buttons */
+  .cta-group {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .cta {
+    font-family: 'Cinzel', serif;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    text-decoration: none;
+    padding: 14px 32px;
+    border-radius: 2px;
+    transition: all 0.3s;
+    cursor: pointer;
+  }
+
+  .cta-primary {
+    background: linear-gradient(180deg, var(--gold) 0%, var(--gold-dark) 100%);
+    color: #0a0b0f;
+    border: 1px solid var(--gold);
+    box-shadow: 0 0 30px rgba(212,168,83,0.15), inset 0 1px 0 rgba(255,255,255,0.15);
+  }
+
+  .cta-primary:hover {
+    background: linear-gradient(180deg, var(--gold-bright) 0%, var(--gold) 100%);
+    box-shadow: 0 0 50px rgba(212,168,83,0.3);
+    transform: translateY(-2px);
+  }
+
+  .cta-secondary {
+    background: transparent;
+    color: var(--gold);
+    border: 1px solid rgba(212,168,83,0.35);
+  }
+
+  .cta-secondary:hover {
+    border-color: var(--gold);
+    background: rgba(212,168,83,0.08);
+    transform: translateY(-2px);
+  }
+
+  /* Scroll indicator */
+  .scroll-hint {
+    position: absolute;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 2;
+    animation: bob 2s ease-in-out infinite;
+  }
+
+  .scroll-hint span {
+    display: block;
+    width: 1px;
+    height: 40px;
+    background: linear-gradient(180deg, var(--gold), transparent);
+    margin: 0 auto;
+  }
+
+  @keyframes bob {
+    0%, 100% { transform: translateX(-50%) translateY(0); }
+    50% { transform: translateX(-50%) translateY(8px); }
+  }
+
+  /* === NAV === */
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 56px;
+    background: rgba(6,7,10,0.85);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(120,100,70,0.12);
+    display: flex;
+    align-items: center;
+    padding: 0 32px;
+    z-index: 100;
+    transition: background 0.3s;
+  }
+
+  .nav-logo {
+    font-family: 'Cinzel', serif;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--gold);
+    letter-spacing: 3px;
+    text-decoration: none;
+  }
+
+  .nav-links {
+    margin-left: auto;
+    display: flex;
+    gap: 28px;
+    list-style: none;
+  }
+
+  .nav-links a {
+    font-family: 'Cinzel', serif;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--dim);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+
+  .nav-links a:hover { color: var(--gold); }
+
+  /* === SECTIONS === */
+  section {
+    padding: 100px 32px;
+    max-width: 1000px;
+    margin: 0 auto;
+  }
+
+  .section-label {
+    font-family: 'Cinzel', serif;
+    font-size: 10px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--gold-dark);
+    margin-bottom: 12px;
+  }
+
+  .section-title {
+    font-family: 'Cinzel', serif;
+    font-size: clamp(28px, 5vw, 42px);
+    font-weight: 700;
+    color: var(--gold);
+    margin-bottom: 24px;
+    line-height: 1.2;
+  }
+
+  .section-text {
+    font-size: 18px;
+    line-height: 1.8;
+    color: #9a968a;
+    max-width: 650px;
+  }
+
+  /* Features Grid */
+  .features {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 24px;
+    margin-top: 48px;
+  }
+
+  .feature-card {
+    background: linear-gradient(135deg, rgba(18,20,28,0.8), rgba(12,14,20,0.6));
+    border: 1px solid rgba(120,100,70,0.12);
+    border-radius: 4px;
+    padding: 32px 28px;
+    transition: all 0.3s;
+  }
+
+  .feature-card:hover {
+    border-color: rgba(212,168,83,0.25);
+    transform: translateY(-4px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+  }
+
+  .feature-icon {
+    font-size: 32px;
+    margin-bottom: 16px;
+  }
+
+  .feature-title {
+    font-family: 'Cinzel', serif;
+    font-size: 16px;
+    color: var(--text);
+    margin-bottom: 10px;
+    letter-spacing: 1px;
+  }
+
+  .feature-desc {
+    font-size: 15px;
+    line-height: 1.7;
+    color: var(--dim);
+  }
+
+  /* Lore Section */
+  .lore-section {
+    position: relative;
+    padding: 120px 32px;
+    text-align: center;
+  }
+
+  .lore-section::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background:
+      radial-gradient(ellipse 50% 40% at 50% 50%, rgba(139,37,0,0.04), transparent),
+      linear-gradient(180deg, var(--bg), rgba(12,14,20,1), var(--bg));
+    z-index: -1;
+  }
+
+  .lore-quote {
+    font-size: clamp(20px, 4vw, 32px);
+    font-style: italic;
+    color: #8a8578;
+    max-width: 700px;
+    margin: 0 auto;
+    line-height: 1.6;
+  }
+
+  .lore-quote em { color: var(--gold); }
+
+  .lore-attr {
+    font-family: 'Cinzel', serif;
+    font-size: 12px;
+    letter-spacing: 2px;
+    color: var(--gold-dark);
+    margin-top: 24px;
+  }
+
+  /* Roadmap */
+  .roadmap {
+    margin-top: 48px;
+  }
+
+  .roadmap-item {
+    display: flex;
+    gap: 24px;
+    padding: 24px 0;
+    border-bottom: 1px solid rgba(120,100,70,0.08);
+  }
+
+  .roadmap-phase {
+    font-family: 'Cinzel', serif;
+    font-size: 12px;
+    letter-spacing: 2px;
+    color: var(--gold);
+    min-width: 100px;
+    padding-top: 4px;
+  }
+
+  .roadmap-title {
+    font-family: 'Cinzel', serif;
+    font-size: 18px;
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+
+  .roadmap-desc {
+    font-size: 15px;
+    color: var(--dim);
+    line-height: 1.6;
+  }
+
+  .roadmap-item.active .roadmap-phase {
+    position: relative;
+  }
+
+  .roadmap-item.active .roadmap-phase::after {
+    content: '●';
+    position: absolute;
+    right: -14px;
+    top: 4px;
+    color: var(--gold);
+    font-size: 8px;
+    animation: pulse-dot 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  /* Footer */
+  footer {
+    padding: 40px 32px;
+    text-align: center;
+    border-top: 1px solid rgba(120,100,70,0.08);
+  }
+
+  .footer-logo {
+    font-family: 'Cinzel', serif;
+    font-size: 14px;
+    color: var(--gold-dark);
+    letter-spacing: 3px;
+    margin-bottom: 12px;
+  }
+
+  .footer-text {
+    font-size: 13px;
+    color: #3a3830;
+  }
+
+  .footer-links {
+    display: flex;
+    gap: 24px;
+    justify-content: center;
+    margin-top: 16px;
+    list-style: none;
+  }
+
+  .footer-links a {
+    font-size: 12px;
+    color: var(--dim);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+  .footer-links a:hover { color: var(--gold); }
+
+  /* Divider */
+  .divider {
+    width: 40px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--gold-dark), transparent);
+    margin: 0 auto;
+  }
+
+  /* Responsive */
+  @media (max-width: 640px) {
+    nav { padding: 0 16px; }
+    .nav-links { gap: 16px; }
+    .nav-links a { font-size: 10px; letter-spacing: 1px; }
+    section { padding: 60px 20px; }
+    .roadmap-item { flex-direction: column; gap: 8px; }
+    .cta { padding: 12px 24px; font-size: 11px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav>
+  <a href="#" class="nav-logo">BROKEN CROWN</a>
+  <ul class="nav-links">
+    <li><a href="#about">About</a></li>
+    <li><a href="#features">Features</a></li>
+    <li><a href="#roadmap">Roadmap</a></li>
+    <li><a href="editor/">Tile Editor</a></li>
+  </ul>
+</nav>
+
+<!-- Hero -->
+<div class="hero">
+  <div class="hero-bg"></div>
+  <div class="particles" id="particles"></div>
+  <div class="hero-content">
+    <div class="crown-icon">👑</div>
+    <div class="deco-line"></div>
+    <h1 class="hero-title">BROKEN<br>CROWN</h1>
+    <p class="hero-sub">A Dark Fantasy MMO</p>
+    <p class="hero-tagline">
+      The king is dead. The crown is shattered.<br>
+      <em>Fight for every shard.</em>
+    </p>
+    <div class="cta-group">
+      <a href="#about" class="cta cta-primary">Discover</a>
+      <a href="editor/" class="cta cta-secondary">Tile Editor</a>
+    </div>
+  </div>
+  <div class="scroll-hint"><span></span></div>
+</div>
+
+<!-- About -->
+<section id="about">
+  <div class="section-label">The World</div>
+  <h2 class="section-title">A Kingdom in Ruins</h2>
+  <p class="section-text">
+    The High King is fallen. His crown — a relic of ancient power — lies shattered, its shards scattered across a realm now torn apart by war. Where once stood a united kingdom, rival alliances now clash for dominion over lands overrun by darkness.
+  </p>
+  <p class="section-text" style="margin-top:16px;">
+    Explore a vast hex-based world that stretches from peaceful green meadows to volcanic wastelands. Every tile holds secrets — ancient ruins, forgotten dungeons, and creatures born from the corruption that spreads from the edges of the world inward.
+  </p>
+</section>
+
+<!-- Lore -->
+<div class="lore-section">
+  <div class="divider" style="margin-bottom:32px;"></div>
+  <p class="lore-quote">
+    "When the crown broke, the land broke with it. <em>What the king held together by will, only war can now decide.</em>"
+  </p>
+  <p class="lore-attr">— Chronicle of the Shattering</p>
+  <div class="divider" style="margin-top:32px;"></div>
+</div>
+
+<!-- Features -->
+<section id="features">
+  <div class="section-label">Gameplay</div>
+  <h2 class="section-title">Forge Your Path</h2>
+  <div class="features">
+    <div class="feature-card">
+      <div class="feature-icon">⚔️</div>
+      <div class="feature-title">Class-Based Combat</div>
+      <div class="feature-desc">Choose from four classes, each with unique skill trees. Master your abilities, craft powerful gear, and face enemies that grow deadlier the further you venture.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🗺️</div>
+      <div class="feature-title">Hex-Based World</div>
+      <div class="feature-desc">A handcrafted world built tile by tile. Five rings of increasing danger surround the shattered capital — from green meadows to volcanic peaks.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🏰</div>
+      <div class="feature-title">Build & Claim</div>
+      <div class="feature-desc">Construct your homestead, grow resources, and fortify your territory. In the outer rings, your buildings become strategic assets in the war for the crown.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">⚡</div>
+      <div class="feature-title">Alliance Warfare</div>
+      <div class="feature-desc">No factions. No safety nets. Form alliances, betray rivals, control territory. The politics emerge from the players — not the game.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🌑</div>
+      <div class="feature-title">Living Darkness</div>
+      <div class="feature-desc">The world grows darker as you venture outward. What begins as a bright fantasy evolves into a grim struggle against forces that corrupted the crown itself.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🔨</div>
+      <div class="feature-title">Community-Built</div>
+      <div class="feature-desc">Design tiles, share creations, shape the world. Our open tile editor lets anyone contribute to the ever-growing map of the Broken Crown.</div>
+    </div>
+  </div>
+</section>
+
+<!-- Roadmap -->
+<section id="roadmap">
+  <div class="section-label">Development</div>
+  <h2 class="section-title">The Road Ahead</h2>
+  <div class="roadmap">
+    <div class="roadmap-item active">
+      <div class="roadmap-phase">Phase 1</div>
+      <div>
+        <div class="roadmap-title">The Foundation</div>
+        <div class="roadmap-desc">Singleplayer vertical slice. Core combat, classes, skills, crafting, and the first three zones of the story. Playable 2-4 hour loop from character creation to the first boss.</div>
+      </div>
+    </div>
+    <div class="roadmap-item">
+      <div class="roadmap-phase">Phase 2</div>
+      <div>
+        <div class="roadmap-title">The Full Journey</div>
+        <div class="roadmap-desc">Complete singleplayer story across all five rings. Level 1-50 progression, equipment system, dungeons, and the final confrontation at the Worldspire.</div>
+      </div>
+    </div>
+    <div class="roadmap-item">
+      <div class="roadmap-phase">Phase 3</div>
+      <div>
+        <div class="roadmap-title">The Living World</div>
+        <div class="roadmap-desc">Multiplayer layer. See other players, trade, form groups. Shared economy and cooperative dungeon runs.</div>
+      </div>
+    </div>
+    <div class="roadmap-item">
+      <div class="roadmap-phase">Phase 4</div>
+      <div>
+        <div class="roadmap-title">The War for the Crown</div>
+        <div class="roadmap-desc">Alliance warfare, territory control, PvP zones, guild fortresses. The endgame that gives the crown its meaning.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer>
+  <div class="footer-logo">BROKEN CROWN</div>
+  <p class="footer-text">A game by The Power of the Cookie</p>
+  <ul class="footer-links">
+    <li><a href="editor/">Tile Editor</a></li>
+    <li><a href="#">Discord</a></li>
+    <li><a href="#">Twitter</a></li>
+  </ul>
+</footer>
+
+<script>
+// Particles
+const container = document.getElementById('particles');
+for (let i = 0; i < 30; i++) {
+  const p = document.createElement('div');
+  p.className = 'particle';
+  p.style.left = Math.random() * 100 + '%';
+  p.style.animationDelay = Math.random() * 6 + 's';
+  p.style.animationDuration = (4 + Math.random() * 4) + 's';
+  p.style.width = p.style.height = (1 + Math.random() * 2) + 'px';
+  container.appendChild(p);
+}
+</script>
+</body>
+</html>
