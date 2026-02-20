@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Broken Crown – Tile Designer</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Source+Sans+3:wght@300;400;600&display=swap');
+
+  :root {
+    --gold: #d4a853;
+    --gold-dim: rgba(212,168,83,0.25);
+    --gold-line: rgba(120,100,70,0.25);
+    --bg: #0a0b0f;
+    --panel: #11131a;
+    --card: rgba(35,37,48,0.7);
+    --text: #c8c4b8;
+    --dim: #6a6558;
+    --danger: #993333;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Source Sans 3', sans-serif; background: var(--bg); color: var(--text); overflow: hidden; height: 100vh; }
+
+  /* === VIEWS === */
+  .view { display: none; height: 100vh; }
+  .view.active { display: flex; }
+
+  /* ============================================================
+     EDITOR VIEW
+     ============================================================ */
+  #editor-view { flex-direction: row; }
+  #editor-canvas { flex: 1; position: relative; }
+  #editor-canvas canvas { display: block; cursor: grab; }
+  #editor-canvas canvas:active { cursor: grabbing; }
+
+  /* Top bar */
+  .bar {
+    position: absolute; top: 0; left: 0; right: 0; height: 44px;
+    background: linear-gradient(180deg, rgba(16,18,26,0.97), rgba(16,18,26,0.88));
+    border-bottom: 1px solid var(--gold-line);
+    display: flex; align-items: center; padding: 0 12px; gap: 5px;
+    z-index: 20; backdrop-filter: blur(10px);
+  }
+  .bar h1 { font-family:'Cinzel',serif; font-size:14px; color:var(--gold); letter-spacing:2px; margin-right:12px; white-space:nowrap; }
+  .bar .logo-sub { font-family:'Source Sans 3',sans-serif; font-size:10px; color:var(--dim); letter-spacing:1px; margin-right:16px; }
+
+  .btn {
+    background: rgba(100,85,55,0.1); border: 1px solid rgba(100,85,55,0.22);
+    color: #9a9280; padding: 4px 11px; border-radius: 3px; cursor: pointer;
+    font: 11px 'Source Sans 3',sans-serif; transition: all 0.15s; white-space: nowrap;
+  }
+  .btn:hover { background: var(--gold-dim); color: var(--gold); border-color: rgba(212,168,83,0.4); }
+  .btn.primary { background: var(--gold-dim); color: var(--gold); border-color: var(--gold); }
+  .sep { width:1px; height:20px; background:var(--gold-line); margin:0 3px; flex-shrink:0; }
+
+  .name-input {
+    background: rgba(25,28,38,0.8); border: 1px solid rgba(100,85,55,0.22);
+    color: var(--text); padding: 3px 8px; border-radius: 3px;
+    font: 12px 'Source Sans 3',sans-serif; width: 140px;
+  }
+  .name-input:focus { outline:none; border-color:var(--gold); }
+
+  /* Sidebar */
+  #editor-sidebar {
+    width: 280px; background: var(--panel);
+    border-left: 1px solid var(--gold-line);
+    display: flex; flex-direction: column; overflow-y: auto; z-index: 20;
+  }
+
+  .sec { padding: 10px 12px; border-bottom: 1px solid rgba(100,85,55,0.1); }
+  .sec-t { font-family:'Cinzel',serif; font-size:9px; color:var(--gold); letter-spacing:1.5px; text-transform:uppercase; margin-bottom:7px; }
+
+  /* Terrain chips */
+  .t-row { display:flex; gap:3px; flex-wrap:wrap; }
+  .t-chip {
+    display:flex; align-items:center; gap:3px;
+    background:rgba(35,37,48,0.5); border:1.5px solid rgba(70,65,55,0.2);
+    border-radius:12px; padding:2px 7px 2px 4px; cursor:pointer;
+    font-size:10px; color:var(--dim); transition:all 0.12s;
+  }
+  .t-chip:hover { border-color:rgba(212,168,83,0.3); }
+  .t-chip.on { border-color:var(--gold); background:rgba(212,168,83,0.1); color:var(--text); }
+  .t-dot { width:9px; height:9px; border-radius:50%; flex-shrink:0; }
+
+  /* Drop zone */
+  .drop {
+    border:2px dashed rgba(100,85,55,0.25); border-radius:6px;
+    padding:12px 8px; text-align:center; cursor:pointer; transition:all 0.2s; margin-bottom:6px;
+  }
+  .drop:hover,.drop.over { border-color:var(--gold); background:rgba(212,168,83,0.04); }
+  .drop-icon { font-size:24px; opacity:0.4; }
+  .drop p { font-size:10px; color:var(--dim); margin-top:2px; }
+
+  /* Model catalog */
+  .m-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:4px; max-height:260px; overflow-y:auto; }
+  .m-card {
+    background:var(--card); border:2px solid rgba(70,65,55,0.15);
+    border-radius:5px; padding:3px; cursor:pointer; text-align:center;
+    transition:all 0.12s; position:relative;
+  }
+  .m-card:hover { border-color:rgba(212,168,83,0.35); }
+  .m-card.on { border-color:var(--gold); background:rgba(212,168,83,0.08); }
+  .m-thumb { width:100%; height:60px; background:rgba(18,20,28,0.6); border-radius:3px; margin-bottom:2px; overflow:hidden; display:flex; align-items:center; justify-content:center; }
+  .m-thumb img { width:100%; height:100%; object-fit:contain; }
+  .m-name { font-size:8px; color:var(--dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .m-del { position:absolute; top:1px; right:3px; background:none; border:none; color:#442222; cursor:pointer; font-size:10px; }
+  .m-del:hover { color:#cc5555; }
+
+  /* Tag input */
+  .tag-row { display:flex; gap:3px; flex-wrap:wrap; margin-top:4px; }
+  .tag { background:rgba(212,168,83,0.1); border:1px solid rgba(212,168,83,0.25); border-radius:10px; padding:1px 7px; font-size:9px; color:var(--gold); display:flex; align-items:center; gap:3px; }
+  .tag button { background:none; border:none; color:var(--gold); cursor:pointer; font-size:10px; }
+  .tag-input { background:rgba(25,28,38,0.6); border:1px solid rgba(100,85,55,0.15); color:var(--text); padding:2px 6px; border-radius:10px; font-size:9px; width:70px; }
+  .tag-input:focus { outline:none; border-color:var(--gold); }
+
+  /* Controls */
+  .ctrl { display:flex; align-items:center; gap:5px; margin-top:5px; }
+  .ctrl label { font-size:9px; color:var(--dim); min-width:42px; }
+  .ctrl input[type="range"] { flex:1; accent-color:var(--gold); height:3px; }
+  .ctrl-v { font-size:9px; color:var(--gold); min-width:28px; text-align:right; }
+
+  /* Placed list */
+  .pl-item {
+    display:flex; justify-content:space-between; align-items:center;
+    padding:4px 6px; margin:2px 0; background:rgba(35,37,48,0.35);
+    border:1px solid rgba(70,65,55,0.08); border-radius:3px;
+    font-size:10px; cursor:pointer; transition:all 0.1s;
+  }
+  .pl-item:hover { border-color:rgba(212,168,83,0.2); }
+  .pl-item.on { border-color:var(--gold); background:rgba(212,168,83,0.06); }
+  .pl-name { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:130px; }
+  .pl-info { font-size:8px; color:var(--dim); }
+  .rm { background:none; border:none; color:#442222; cursor:pointer; font-size:12px; }
+  .rm:hover { color:#cc5555; }
+
+  .empty { text-align:center; color:#2a2820; font-size:10px; padding:8px 0; font-style:italic; }
+
+  /* Status */
+  .status {
+    position:absolute; bottom:0; left:0; right:0; height:24px;
+    background:rgba(12,14,20,0.92); border-top:1px solid rgba(100,85,55,0.12);
+    display:flex; align-items:center; padding:0 12px;
+    font-size:9px; color:#3a3830; gap:16px; z-index:20;
+  }
+
+  /* Toast */
+  #toast {
+    position:fixed; bottom:36px; left:50%; transform:translateX(-50%);
+    background:rgba(16,18,26,0.95); border:1px solid rgba(212,168,83,0.3);
+    padding:5px 16px; border-radius:5px; font-size:11px; color:var(--gold);
+    pointer-events:none; z-index:100; opacity:0; transition:opacity 0.25s;
+  }
+  #toast.show { opacity:1; }
+
+  /* ============================================================
+     GALLERY VIEW
+     ============================================================ */
+  #gallery-view { flex-direction: column; }
+
+  .gallery-bar {
+    height:52px; background:var(--panel); border-bottom:1px solid var(--gold-line);
+    display:flex; align-items:center; padding:0 20px; gap:12px; flex-shrink:0;
+  }
+  .gallery-bar h1 { font-family:'Cinzel',serif; font-size:18px; color:var(--gold); letter-spacing:2px; }
+  .gallery-bar .sub { font-size:11px; color:var(--dim); margin-left:8px; }
+
+  .gallery-search {
+    background:rgba(25,28,38,0.8); border:1px solid rgba(100,85,55,0.2);
+    color:var(--text); padding:6px 12px; border-radius:4px; font-size:12px;
+    width:220px; margin-left:auto;
+  }
+  .gallery-search:focus { outline:none; border-color:var(--gold); }
+
+  .gallery-grid {
+    flex:1; overflow-y:auto; padding:20px;
+    display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr));
+    gap:14px; align-content:start;
+  }
+
+  .tile-card {
+    background:var(--card); border:1.5px solid rgba(70,65,55,0.15);
+    border-radius:8px; overflow:hidden; cursor:pointer; transition:all 0.2s;
+  }
+  .tile-card:hover { border-color:rgba(212,168,83,0.4); transform:translateY(-2px); box-shadow:0 4px 20px rgba(0,0,0,0.3); }
+
+  .tile-preview { width:100%; height:160px; background:rgba(18,20,28,0.8); position:relative; }
+  .tile-preview canvas { width:100%; height:100%; }
+
+  .tile-info { padding:10px 12px; }
+  .tile-title { font-family:'Cinzel',serif; font-size:13px; color:var(--text); margin-bottom:3px; }
+  .tile-meta { font-size:10px; color:var(--dim); display:flex; gap:8px; align-items:center; }
+  .tile-terrain-dot { width:8px; height:8px; border-radius:50%; display:inline-block; }
+  .tile-tags { display:flex; gap:3px; flex-wrap:wrap; margin-top:5px; }
+  .tile-tag { font-size:8px; background:rgba(212,168,83,0.08); border:1px solid rgba(212,168,83,0.15); border-radius:8px; padding:1px 6px; color:var(--gold); }
+
+  .tile-actions { display:flex; gap:4px; padding:0 12px 10px; }
+  .tile-btn { font-size:10px; padding:3px 8px; }
+
+  .gallery-empty {
+    grid-column:1/-1; text-align:center; padding:60px 20px;
+    color:#3a3830; font-size:14px;
+  }
+
+  /* Scrollbars */
+  ::-webkit-scrollbar { width:5px; }
+  ::-webkit-scrollbar-track { background:transparent; }
+  ::-webkit-scrollbar-thumb { background:rgba(100,85,55,0.2); border-radius:3px; }
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     EDITOR VIEW
+     ============================================================ -->
+<div id="editor-view" class="view active">
+  <div id="editor-canvas">
+    <div class="bar">
+      <a href="../" style="text-decoration:none;"><h1>BROKEN CROWN</h1></a>
+      <span class="logo-sub">TILE DESIGNER</span>
+      <input class="name-input" id="tile-name" value="Neue Kachel" placeholder="Name...">
+      <div class="sep"></div>
+      <button class="btn" onclick="switchView('gallery')">📋 Galerie</button>
+      <div class="sep"></div>
+      <button class="btn primary" onclick="saveTile()">💾 Speichern</button>
+      <button class="btn" onclick="exportSingle()">Export JSON</button>
+      <button class="btn" onclick="exportAll()">Export Alle</button>
+      <div class="sep"></div>
+      <button class="btn" onclick="undo()">↩</button>
+      <button class="btn" onclick="clearObjects()">Leeren</button>
+    </div>
+    <div class="status">
+      <span>LMB: Platzieren</span>
+      <span>RMB: Drehen</span>
+      <span>Scroll: Zoom</span>
+      <span>Shift+LMB: Schwenken</span>
+      <span style="margin-left:auto">Objekte: <b id="obj-count">0</b></span>
+    </div>
+  </div>
+
+  <div id="editor-sidebar">
+    <div class="sec">
+      <div class="sec-t">Terrain</div>
+      <div class="t-row" id="terrain-row"></div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-t">Modelle (GLB)</div>
+      <div class="drop" id="drop-zone" onclick="document.getElementById('glb-input').click()">
+        <div class="drop-icon">📂</div>
+        <p>GLB hierher ziehen oder klicken</p>
+      </div>
+      <div class="m-grid" id="model-grid"></div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-t">Platzierung</div>
+      <div class="ctrl"><label>Rotation</label><input type="range" min="0" max="360" value="0" step="5" id="c-rot" oninput="ctrlUpdate('rot')"><span class="ctrl-v" id="v-rot">0°</span></div>
+      <div class="ctrl"><label>Größe</label><input type="range" min="10" max="400" value="100" step="5" id="c-scl" oninput="ctrlUpdate('scl')"><span class="ctrl-v" id="v-scl">100%</span></div>
+      <div class="ctrl"><label>Höhe</label><input type="range" min="-50" max="200" value="0" step="5" id="c-hgt" oninput="ctrlUpdate('hgt')"><span class="ctrl-v" id="v-hgt">0</span></div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-t">Tags</div>
+      <div class="tag-row" id="tag-row"></div>
+      <input class="tag-input" id="tag-input" placeholder="+ Tag" onkeydown="if(event.key==='Enter')addTag()">
+    </div>
+
+    <div class="sec" style="flex:1;">
+      <div class="sec-t">Platzierte Objekte</div>
+      <div id="placed-list"><div class="empty">Keine Objekte</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     GALLERY VIEW
+     ============================================================ -->
+<div id="gallery-view" class="view">
+  <div class="gallery-bar">
+    <h1>BROKEN CROWN</h1>
+    <span class="sub">TILE GALERIE</span>
+    <button class="btn" onclick="switchView('editor')" style="margin-left:16px;">✏️ Editor</button>
+    <button class="btn" onclick="document.getElementById('import-input').click()">📥 Import</button>
+    <button class="btn" onclick="exportAll()">📤 Export Alle</button>
+    <input class="gallery-search" id="gallery-search" placeholder="Suchen nach Name oder Tag..." oninput="renderGallery()">
+  </div>
+  <div class="gallery-grid" id="gallery-grid"></div>
+</div>
+
+<!-- Hidden inputs -->
+<input type="file" id="glb-input" accept=".glb,.gltf" multiple style="display:none" onchange="handleGLB(event)">
+<input type="file" id="import-input" accept=".json" style="display:none" onchange="handleImport(event)">
+<div id="toast"></div>
+
+<!-- ============================================================
+     SCRIPTS
+     ============================================================ -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script>
+// ============================================================
+// CONFIG
+// ============================================================
+const HEX_R = 2.0;
+const TERRAINS = [
+  {id:'wiese',  n:'Wiese',   c:0x73b852},
+  {id:'wald',   n:'Wald',    c:0x2e7326},
+  {id:'berg',   n:'Gebirge', c:0x8c8073},
+  {id:'wasser', n:'Wasser',  c:0x3366b3},
+  {id:'sumpf',  n:'Sumpf',   c:0x596b40},
+  {id:'ruine',  n:'Ruine',   c:0x806159},
+  {id:'sand',   n:'Wüste',   c:0xc2a856},
+  {id:'schnee', n:'Schnee',  c:0xcdd5dc},
+  {id:'lava',   n:'Lava',    c:0x8b2500},
+];
+
+// ============================================================
+// STATE
+// ============================================================
+let terrain = 'wiese';
+let catalog = [];          // {name, fileName, template, normalizedScale, thumbURL}
+let selModel = -1;
+let placed = [];           // {modelIdx, modelName, fileName, x, z, rot, scl, hgt, mesh}
+let selPlaced = -1;
+let undoStack = [];
+let tags = [];
+let library = [];          // saved tiles: {id, name, terrain, tags, objects[], created, thumbURL}
+let currentView = 'editor';
+
+// THREE (editor)
+let scene, camera, renderer, raycaster, mouse;
+let hexSurf, hexBorder;
+let camTheta=0.8, camPhi=1.05, camDist=6.5;
+let camTarget = null;
+let dragging=false, panning=false, lastM={x:0,y:0};
+const loader = new THREE.GLTFLoader();
+
+// Thumbnail
+let thumbRenderer, thumbScene, thumbCam;
+
+// ============================================================
+// INIT
+// ============================================================
+function init() {
+  const el = document.getElementById('editor-canvas');
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x0c0d14);
+  camTarget = new THREE.Vector3(0, 0.2, 0);
+
+  camera = new THREE.PerspectiveCamera(42, el.clientWidth/el.clientHeight, 0.05, 100);
+  renderer = new THREE.WebGLRenderer({antialias:true});
+  renderer.setSize(el.clientWidth, el.clientHeight);
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.1;
+  el.appendChild(renderer.domElement);
+
+  // Lights
+  const sun = new THREE.DirectionalLight(0xfff0dd, 1.0);
+  sun.position.set(5, 10, 4);
+  sun.castShadow = true;
+  sun.shadow.mapSize.set(2048, 2048);
+  const s=5;
+  sun.shadow.camera.left=-s; sun.shadow.camera.right=s;
+  sun.shadow.camera.top=s; sun.shadow.camera.bottom=-s;
+  sun.shadow.camera.near=0.1; sun.shadow.camera.far=25;
+  sun.shadow.bias=-0.001;
+  scene.add(sun);
+  scene.add(new THREE.AmbientLight(0x556688, 0.4));
+  const fill = new THREE.DirectionalLight(0x8899cc, 0.25);
+  fill.position.set(-4,3,-6); scene.add(fill);
+
+  // Ground
+  const gnd = new THREE.Mesh(
+    new THREE.PlaneGeometry(24,24),
+    new THREE.MeshStandardMaterial({color:0x080910, roughness:1})
+  );
+  gnd.rotation.x=-Math.PI/2; gnd.position.y=-0.02; gnd.receiveShadow=true;
+  scene.add(gnd);
+
+  buildHex();
+
+  // Thumb renderer
+  thumbScene = new THREE.Scene();
+  thumbScene.background = new THREE.Color(0x14161e);
+  thumbScene.add(new THREE.AmbientLight(0xffffff, 0.5));
+  const tl = new THREE.DirectionalLight(0xffffff, 0.8);
+  tl.position.set(2,4,3); thumbScene.add(tl);
+  thumbCam = new THREE.PerspectiveCamera(40, 1, 0.01, 50);
+
+  raycaster = new THREE.Raycaster();
+  mouse = new THREE.Vector2();
+
+  buildTerrainUI();
+  updateCamera();
+  animate();
+
+  // Events
+  const c = renderer.domElement;
+  c.addEventListener('mousemove', onMove);
+  c.addEventListener('mousedown', onDown);
+  c.addEventListener('mouseup', onUp);
+  c.addEventListener('wheel', onWheel);
+  c.addEventListener('contextmenu', e=>e.preventDefault());
+  window.addEventListener('resize', onResize);
+
+  // Drop
+  const dz = document.getElementById('drop-zone');
+  dz.addEventListener('dragover', e=>{e.preventDefault(); dz.classList.add('over');});
+  dz.addEventListener('dragleave', ()=>dz.classList.remove('over'));
+  dz.addEventListener('drop', e=>{e.preventDefault(); dz.classList.remove('over'); handleFiles(e.dataTransfer.files);});
+  document.body.addEventListener('dragover', e=>e.preventDefault());
+  document.body.addEventListener('drop', e=>{e.preventDefault(); handleFiles(e.dataTransfer.files);});
+
+  loadLibrary();
+}
+
+// ============================================================
+// HEX
+// ============================================================
+function makeHexGeo(r, h) {
+  const sh = new THREE.Shape();
+  for(let i=0;i<6;i++){
+    const a=Math.PI/180*(60*i);
+    i===0?sh.moveTo(Math.cos(a)*r,Math.sin(a)*r):sh.lineTo(Math.cos(a)*r,Math.sin(a)*r);
+  }
+  sh.closePath();
+  const g=new THREE.ExtrudeGeometry(sh,{depth:h,bevelEnabled:false});
+  g.rotateX(-Math.PI/2); g.translate(0,h/2,0);
+  return g;
+}
+
+function buildHex() {
+  if(hexBorder)scene.remove(hexBorder);
+  if(hexSurf)scene.remove(hexSurf);
+  hexBorder = new THREE.Mesh(makeHexGeo(HEX_R,0.12), new THREE.MeshStandardMaterial({color:0x181a24,roughness:0.9}));
+  hexBorder.receiveShadow=true; scene.add(hexBorder);
+  const td=TERRAINS.find(t=>t.id===terrain);
+  hexSurf = new THREE.Mesh(makeHexGeo(HEX_R*0.935,0.14), new THREE.MeshStandardMaterial({color:td.c,roughness:0.8}));
+  hexSurf.position.y=0.005; hexSurf.receiveShadow=true; scene.add(hexSurf);
+}
+
+function setTerrain(id) {
+  terrain=id;
+  hexSurf.material.color.setHex(TERRAINS.find(t=>t.id===id).c);
+  document.querySelectorAll('.t-chip').forEach(c=>c.classList.remove('on'));
+  document.getElementById('tc-'+id)?.classList.add('on');
+}
+
+function buildTerrainUI() {
+  const row=document.getElementById('terrain-row');
+  row.innerHTML='';
+  TERRAINS.forEach(t=>{
+    const d=document.createElement('div');
+    d.className='t-chip'+(t.id===terrain?' on':'');
+    d.id='tc-'+t.id;
+    d.innerHTML=`<div class="t-dot" style="background:#${t.c.toString(16).padStart(6,'0')}"></div>${t.n}`;
+    d.onclick=()=>setTerrain(t.id);
+    row.appendChild(d);
+  });
+}
+
+// ============================================================
+// GLB LOADING
+// ============================================================
+function handleGLB(e){handleFiles(e.target.files);e.target.value='';}
+
+function handleFiles(files) {
+  let n=0;
+  for(const f of files){
+    if(!f.name.match(/\.(glb|gltf)$/i))continue;
+    loadGLB(f); n++;
+  }
+  if(n)toast(`${n} Modell${n>1?'e':''} geladen`);
+}
+
+function loadGLB(file) {
+  const url=URL.createObjectURL(file);
+  const name=file.name.replace(/\.(glb|gltf)$/i,'').replace(/^(SM_|Chr_|FX_|Env_|Prop_|Bld_|Wep_)/i,'').replace(/_/g,' ');
+
+  loader.load(url, gltf=>{
+    const model=gltf.scene;
+    const box=new THREE.Box3().setFromObject(model);
+    const sz=new THREE.Vector3(); box.getSize(sz);
+    const ns=1.0/Math.max(sz.x,sz.y,sz.z);
+    model.scale.setScalar(ns);
+    box.setFromObject(model);
+    const ctr=new THREE.Vector3(); box.getCenter(ctr);
+    model.position.sub(ctr);
+    model.position.y-=box.min.y;
+    model.traverse(c=>{if(c.isMesh){c.castShadow=true;c.receiveShadow=true;}});
+
+    const entry={name, fileName:file.name, template:model, normalizedScale:ns, thumbURL:null};
+    catalog.push(entry);
+    genThumb(catalog.length-1);
+    renderCatalog();
+  });
+}
+
+function genThumb(i) {
+  const e=catalog[i]; if(!e)return;
+  if(!thumbRenderer){thumbRenderer=new THREE.WebGLRenderer({antialias:true,alpha:false});thumbRenderer.setSize(140,100);}
+  const clone=e.template.clone();
+  thumbScene.add(clone);
+  const box=new THREE.Box3().setFromObject(clone);
+  const sz=new THREE.Vector3(); box.getSize(sz);
+  const ctr=new THREE.Vector3(); box.getCenter(ctr);
+  const dist=Math.max(sz.x,sz.y,sz.z)*2.2;
+  thumbCam.position.set(ctr.x+dist*0.7,ctr.y+dist*0.5,ctr.z+dist*0.7);
+  thumbCam.lookAt(ctr);
+  thumbRenderer.render(thumbScene,thumbCam);
+  thumbScene.remove(clone);
+  e.thumbURL=thumbRenderer.domElement.toDataURL();
+  renderCatalog();
+}
+
+function renderCatalog() {
+  const g=document.getElementById('model-grid');
+  g.innerHTML=catalog.map((m,i)=>`
+    <div class="m-card ${i===selModel?'on':''}" onclick="selModel=${i};renderCatalog()">
+      <button class="m-del" onclick="event.stopPropagation();catalog.splice(${i},1);if(selModel>=${catalog.length})selModel=-1;renderCatalog()">✕</button>
+      <div class="m-thumb">${m.thumbURL?`<img src="${m.thumbURL}">`:'📦'}</div>
+      <div class="m-name" title="${m.name}">${m.name}</div>
+    </div>`).join('');
+}
+
+// ============================================================
+// PLACEMENT
+// ============================================================
+function getHexPt(e) {
+  const rect=renderer.domElement.getBoundingClientRect();
+  mouse.x=((e.clientX-rect.left)/rect.width)*2-1;
+  mouse.y=-((e.clientY-rect.top)/rect.height)*2+1;
+  raycaster.setFromCamera(mouse,camera);
+  const plane=new THREE.Plane(new THREE.Vector3(0,1,0),-0.14);
+  const pt=new THREE.Vector3();
+  raycaster.ray.intersectPlane(plane,pt);
+  if(!pt||Math.sqrt(pt.x*pt.x+pt.z*pt.z)>HEX_R*0.92)return null;
+  return pt;
+}
+
+function placeModel(x,z) {
+  if(selModel<0||!catalog[selModel])return;
+  const e=catalog[selModel];
+  const rot=parseFloat(document.getElementById('c-rot').value)*Math.PI/180;
+  const scl=parseFloat(document.getElementById('c-scl').value)/100;
+  const hgt=parseFloat(document.getElementById('c-hgt').value)/100;
+
+  const mesh=e.template.clone();
+  mesh.scale.setScalar(e.normalizedScale*scl);
+  mesh.position.set(x, 0.14+hgt, z);
+  mesh.rotation.y=rot;
+  mesh.traverse(c=>{if(c.isMesh){c.castShadow=true;c.receiveShadow=true;}});
+  scene.add(mesh);
+
+  undoStack.push(placed.length);
+  placed.push({
+    modelIdx:selModel, modelName:e.name, fileName:e.fileName,
+    x, z,
+    rot:parseFloat(document.getElementById('c-rot').value),
+    scl:parseFloat(document.getElementById('c-scl').value),
+    hgt:parseFloat(document.getElementById('c-hgt').value),
+    mesh
+  });
+  renderPlaced();
+}
+
+function renderPlaced() {
+  const el=document.getElementById('placed-list');
+  document.getElementById('obj-count').textContent=placed.length;
+  if(!placed.length){el.innerHTML='<div class="empty">Keine Objekte</div>';return;}
+  el.innerHTML=placed.map((o,i)=>`
+    <div class="pl-item ${i===selPlaced?'on':''}" onclick="selectPlaced(${i})">
+      <span class="pl-name">${o.modelName}</span>
+      <span><span class="pl-info">${o.rot}° ${o.scl}%</span> <button class="rm" onclick="event.stopPropagation();removePlaced(${i})">✕</button></span>
+    </div>`).join('');
+}
+
+function selectPlaced(i) {
+  selPlaced=i;
+  const o=placed[i];
+  document.getElementById('c-rot').value=o.rot;
+  document.getElementById('c-scl').value=o.scl;
+  document.getElementById('c-hgt').value=o.hgt;
+  ctrlUpdate('rot');ctrlUpdate('scl');ctrlUpdate('hgt');
+  renderPlaced();
+}
+
+function removePlaced(i) {
+  scene.remove(placed[i].mesh);
+  placed.splice(i,1);
+  if(selPlaced>=placed.length)selPlaced=-1;
+  renderPlaced();
+}
+
+function ctrlUpdate(t) {
+  if(t==='rot')document.getElementById('v-rot').textContent=document.getElementById('c-rot').value+'°';
+  if(t==='scl')document.getElementById('v-scl').textContent=document.getElementById('c-scl').value+'%';
+  if(t==='hgt')document.getElementById('v-hgt').textContent=document.getElementById('c-hgt').value;
+  if(selPlaced>=0&&placed[selPlaced]){
+    const o=placed[selPlaced];
+    const e=catalog[o.modelIdx];
+    if(!e)return;
+    if(t==='rot'){o.rot=+document.getElementById('c-rot').value;o.mesh.rotation.y=o.rot*Math.PI/180;}
+    if(t==='scl'){o.scl=+document.getElementById('c-scl').value;o.mesh.scale.setScalar(e.normalizedScale*o.scl/100);}
+    if(t==='hgt'){o.hgt=+document.getElementById('c-hgt').value;o.mesh.position.y=0.14+o.hgt/100;}
+    renderPlaced();
+  }
+}
+
+// ============================================================
+// TAGS
+// ============================================================
+function addTag() {
+  const inp=document.getElementById('tag-input');
+  const v=inp.value.trim().toLowerCase();
+  if(v&&!tags.includes(v)){tags.push(v);}
+  inp.value='';
+  renderTags();
+}
+
+function removeTag(i){tags.splice(i,1);renderTags();}
+
+function renderTags() {
+  document.getElementById('tag-row').innerHTML=
+    tags.map((t,i)=>`<div class="tag">${t}<button onclick="removeTag(${i})">✕</button></div>`).join('')+
+    '';
+}
+
+// ============================================================
+// INPUT
+// ============================================================
+function onMove(e) {
+  if(!dragging)return;
+  const dx=e.clientX-lastM.x, dy=e.clientY-lastM.y;
+  if(panning){
+    const r=new THREE.Vector3();
+    camera.getWorldDirection(r); r.y=0; r.normalize();
+    const f=r.clone().cross(new THREE.Vector3(0,1,0)).negate();
+    camTarget.addScaledVector(r, dx*0.004);
+    camTarget.addScaledVector(f, dy*0.004);
+  } else {
+    camTheta-=dx*0.006;
+    camPhi=Math.max(0.15,Math.min(1.5,camPhi-dy*0.006));
+  }
+  lastM.x=e.clientX; lastM.y=e.clientY;
+  updateCamera();
+}
+
+function onDown(e) {
+  lastM.x=e.clientX; lastM.y=e.clientY;
+  if(e.button===0&&!e.shiftKey){const pt=getHexPt(e);if(pt)placeModel(pt.x,pt.z);}
+  else if(e.button===1||(e.button===0&&e.shiftKey)){dragging=true;panning=true;}
+  else if(e.button===2){dragging=true;panning=false;}
+}
+function onUp(){dragging=false;panning=false;}
+function onWheel(e){camDist=Math.max(1.5,Math.min(20,camDist+e.deltaY*0.004));updateCamera();}
+
+function onResize() {
+  if(currentView==='editor'){
+    const el=document.getElementById('editor-canvas');
+    camera.aspect=el.clientWidth/el.clientHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(el.clientWidth,el.clientHeight);
+  }
+}
+
+function updateCamera() {
+  camera.position.set(
+    camTarget.x+camDist*Math.sin(camPhi)*Math.cos(camTheta),
+    camTarget.y+camDist*Math.cos(camPhi),
+    camTarget.z+camDist*Math.sin(camPhi)*Math.sin(camTheta)
+  );
+  camera.lookAt(camTarget);
+}
+
+// ============================================================
+// ACTIONS
+// ============================================================
+function clearObjects() {
+  if(!placed.length)return;
+  if(!confirm('Alle Objekte entfernen?'))return;
+  placed.forEach(o=>scene.remove(o.mesh));
+  placed=[];undoStack=[];selPlaced=-1;renderPlaced();
+}
+
+function undo() {
+  if(!undoStack.length)return;
+  const idx=undoStack.pop();
+  if(idx<placed.length){scene.remove(placed[idx].mesh);placed.splice(idx,1);}
+  renderPlaced();
+}
+
+function newTile() {
+  placed.forEach(o=>scene.remove(o.mesh));
+  placed=[];undoStack=[];selPlaced=-1;tags=[];
+  document.getElementById('tile-name').value='Neue Kachel';
+  setTerrain('wiese');
+  renderPlaced();renderTags();
+}
+
+// ============================================================
+// SAVE / LIBRARY
+// ============================================================
+function buildTileData() {
+  return {
+    id: 'tile_'+Date.now(),
+    name: document.getElementById('tile-name').value.trim()||'Unbenannt',
+    terrain,
+    tags: [...tags],
+    objects: placed.map(o=>({
+      model: o.fileName,
+      name: o.modelName,
+      x: Math.round(o.x*1000)/1000,
+      z: Math.round(o.z*1000)/1000,
+      rotation: o.rot,
+      scale: o.scl,
+      height: o.hgt,
+    })),
+    created: new Date().toISOString(),
+  };
+}
+
+function saveTile() {
+  const data = buildTileData();
+  // Generate tile thumbnail from current camera
+  renderer.render(scene, camera);
+  data.thumbURL = renderer.domElement.toDataURL('image/jpeg', 0.6);
+  library.push(data);
+  persistLibrary();
+  renderGallery();
+  toast('Gespeichert: '+data.name);
+}
+
+function exportSingle() {
+  const data = buildTileData();
+  // Godot-ready format
+  const godotData = {
+    _format: "broken_crown_tile",
+    _version: 1,
+    name: data.name,
+    terrain: data.terrain,
+    tags: data.tags,
+    hex_radius: HEX_R,
+    objects: data.objects.map(o=>({
+      model: o.model,
+      position: {x: o.x, y: o.height/100, z: o.z},
+      rotation_degrees: o.rotation,
+      scale_percent: o.scale,
+    })),
+  };
+  download(JSON.stringify(godotData,null,2), (data.name||'tile').replace(/\s+/g,'-').toLowerCase()+'.json');
+}
+
+function exportAll() {
+  if(!library.length){toast('Keine Tiles in der Bibliothek');return;}
+  const data = {
+    _format: "broken_crown_tileset",
+    _version: 1,
+    exported: new Date().toISOString(),
+    tiles: library.map(t=>({
+      id: t.id,
+      name: t.name,
+      terrain: t.terrain,
+      tags: t.tags,
+      hex_radius: HEX_R,
+      objects: t.objects.map(o=>({
+        model: o.model,
+        position: {x: o.x, y: (o.height||0)/100, z: o.z},
+        rotation_degrees: o.rotation,
+        scale_percent: o.scale,
+      })),
+    })),
+  };
+  download(JSON.stringify(data,null,2), 'broken-crown-tiles.json');
+  toast(library.length+' Tiles exportiert');
+}
+
+function handleImport(e) {
+  const file=e.target.files[0]; if(!file)return;
+  const r=new FileReader();
+  r.onload=ev=>{
+    try{
+      const d=JSON.parse(ev.target.result);
+      if(d._format==='broken_crown_tileset'&&d.tiles){
+        let n=0;
+        d.tiles.forEach(t=>{
+          library.push({
+            id:t.id||'tile_'+Date.now()+'_'+(n++),
+            name:t.name, terrain:t.terrain, tags:t.tags||[],
+            objects:(t.objects||[]).map(o=>({
+              model:o.model, name:o.model.replace(/\.(glb|gltf)$/i,'').replace(/_/g,' '),
+              x:o.position.x, z:o.position.z,
+              rotation:o.rotation_degrees, scale:o.scale_percent, height:Math.round((o.position.y||0)*100),
+            })),
+            created:new Date().toISOString(), thumbURL:null,
+          });
+        });
+        persistLibrary(); renderGallery();
+        toast(n+' Tiles importiert');
+      } else if(d._format==='broken_crown_tile'){
+        library.push({
+          id:d.id||'tile_'+Date.now(),
+          name:d.name, terrain:d.terrain, tags:d.tags||[],
+          objects:(d.objects||[]).map(o=>({
+            model:o.model, name:o.model.replace(/\.(glb|gltf)$/i,'').replace(/_/g,' '),
+            x:o.position.x, z:o.position.z,
+            rotation:o.rotation_degrees, scale:o.scale_percent, height:Math.round((o.position.y||0)*100),
+          })),
+          created:new Date().toISOString(), thumbURL:null,
+        });
+        persistLibrary(); renderGallery();
+        toast('Tile importiert: '+d.name);
+      }
+    }catch(err){alert('Fehler: '+err.message);}
+  };
+  r.readAsText(file);
+  e.target.value='';
+}
+
+// ============================================================
+// PERSISTENCE (localStorage)
+// ============================================================
+function persistLibrary() {
+  try{
+    // Store without thumbs if too large
+    const data=library.map(t=>({...t, thumbURL:t.thumbURL||null}));
+    const json=JSON.stringify(data);
+    if(json.length<4*1024*1024) localStorage.setItem('bc_lib',json);
+    else {
+      // Strip thumbs
+      const lite=library.map(t=>({...t, thumbURL:null}));
+      localStorage.setItem('bc_lib',JSON.stringify(lite));
+    }
+  }catch(e){}
+}
+
+function loadLibrary() {
+  try{library=JSON.parse(localStorage.getItem('bc_lib')||'[]');}catch(e){library=[];}
+  renderGallery();
+}
+
+// ============================================================
+// GALLERY
+// ============================================================
+function renderGallery() {
+  const grid=document.getElementById('gallery-grid');
+  const q=(document.getElementById('gallery-search')?.value||'').toLowerCase();
+  const filtered=library.filter(t=>{
+    if(!q)return true;
+    return t.name.toLowerCase().includes(q) || (t.tags||[]).some(tag=>tag.includes(q));
+  });
+
+  if(!filtered.length){
+    grid.innerHTML=`<div class="gallery-empty">${library.length?'Keine Ergebnisse':'Noch keine Tiles gespeichert. Erstelle welche im Editor!'}</div>`;
+    return;
+  }
+
+  grid.innerHTML=filtered.map((t,i)=>{
+    const realIdx=library.indexOf(t);
+    const td=TERRAINS.find(x=>x.id===t.terrain);
+    const col=td?td.c.toString(16).padStart(6,'0'):'73b852';
+    return `<div class="tile-card">
+      <div class="tile-preview" style="background:linear-gradient(135deg,#${col}22,#0c0d14);">
+        ${t.thumbURL?`<img src="${t.thumbURL}" style="width:100%;height:100%;object-fit:cover;">`
+          :`<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:36px;opacity:0.15;">⬡</div>`}
+      </div>
+      <div class="tile-info">
+        <div class="tile-title">${t.name}</div>
+        <div class="tile-meta">
+          <span class="tile-terrain-dot" style="background:#${col}"></span>
+          ${td?td.n:'?'} · ${t.objects.length} Obj.
+        </div>
+        ${(t.tags||[]).length?`<div class="tile-tags">${t.tags.map(tag=>`<span class="tile-tag">${tag}</span>`).join('')}</div>`:''}
+      </div>
+      <div class="tile-actions">
+        <button class="btn tile-btn" onclick="loadIntoEditor(${realIdx})">✏️ Bearbeiten</button>
+        <button class="btn tile-btn" onclick="duplicateTile(${realIdx})">📋</button>
+        <button class="btn tile-btn" onclick="deleteTile(${realIdx})">🗑️</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function loadIntoEditor(i) {
+  const t=library[i];
+  // Clear current
+  placed.forEach(o=>scene.remove(o.mesh));
+  placed=[];undoStack=[];selPlaced=-1;
+
+  document.getElementById('tile-name').value=t.name;
+  tags=t.tags?[...t.tags]:[];
+  setTerrain(t.terrain);
+  renderTags();
+
+  // Re-place objects (needs models loaded)
+  let missing=0;
+  for(const o of t.objects){
+    const mIdx=catalog.findIndex(m=>m.fileName===o.model);
+    if(mIdx<0){missing++;continue;}
+    selModel=mIdx;
+    document.getElementById('c-rot').value=o.rotation||0;
+    document.getElementById('c-scl').value=o.scale||100;
+    document.getElementById('c-hgt').value=o.height||0;
+    ctrlUpdate('rot');ctrlUpdate('scl');ctrlUpdate('hgt');
+    placeModel(o.x, o.z);
+  }
+  renderPlaced();
+  switchView('editor');
+  if(missing)toast(`${missing} Modell(e) fehlen – GLBs laden!`);
+}
+
+function duplicateTile(i) {
+  const copy={...library[i], id:'tile_'+Date.now(), name:library[i].name+' (Kopie)', created:new Date().toISOString()};
+  library.push(copy);
+  persistLibrary();
+  renderGallery();
+  toast('Dupliziert');
+}
+
+function deleteTile(i) {
+  if(!confirm(`"${library[i].name}" löschen?`))return;
+  library.splice(i,1);
+  persistLibrary();
+  renderGallery();
+}
+
+// ============================================================
+// VIEW SWITCHING
+// ============================================================
+function switchView(v) {
+  currentView=v;
+  document.getElementById('editor-view').classList.toggle('active',v==='editor');
+  document.getElementById('gallery-view').classList.toggle('active',v==='gallery');
+  if(v==='editor')onResize();
+  if(v==='gallery')renderGallery();
+}
+
+// ============================================================
+// HELPERS
+// ============================================================
+function download(content,filename) {
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([content],{type:'application/json'}));
+  a.download=filename; a.click();
+}
+
+function toast(msg) {
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2200);
+}
+
+function animate() {
+  requestAnimationFrame(animate);
+  if(currentView==='editor')renderer.render(scene,camera);
+}
+
+// ============================================================
+// START
+// ============================================================
+init();
+</script>
+</body>
+</html>
